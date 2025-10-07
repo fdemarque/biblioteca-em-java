@@ -1,23 +1,29 @@
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
 import java.io.*;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 import static java.lang.Integer.parseInt;
 
 public class Biblioteca {
-    private final String NOME_ARQUIVO = "biblioteca_pessoal.txt";
-    ArrayList<Livro> biblioteca = new ArrayList<>();
+    private final String NOME_ARQUIVO = "biblioteca.json";
+    private ArrayList<Livro> livros;
 
     public Biblioteca() {
+        this.livros = new ArrayList<>();
         carregarBiblioteca();
     }
 
     public void listarLivros() {
         System.out.println("\n --- Livros na Biblioteca ---");
-        if (biblioteca.isEmpty()) {
+        if (livros.isEmpty()) {
             System.out.println("Nenhum livro encontrado");
         } else  {
-            for (Livro livro : biblioteca) {
+            for (Livro livro : livros) {
                 System.out.println("---");
                 System.out.println("Título: " + livro.titulo);
                 System.out.println("Autor: " + livro.autor);
@@ -39,7 +45,7 @@ public class Biblioteca {
             System.out.println("Erro no formato, atribuindo valor padrão (0)");
         }
 
-        this.biblioteca.add(new Livro(titulo, autor, anoDePublicacao));
+        this.livros.add(new Livro(titulo, autor, anoDePublicacao));
         System.out.println("Livro adicionado com sucesso!");
     }
 
@@ -49,34 +55,32 @@ public class Biblioteca {
     }
 
     private void salvarBiblioteca(){
-        try (PrintWriter writer = new PrintWriter(new FileWriter(NOME_ARQUIVO))) {
-            for (Livro livro : biblioteca){
-                writer.println(livro.titulo + ";" + livro.autor + ";" + livro.anoDePublicacao);
-            }
+        Gson gson  = new GsonBuilder().setPrettyPrinting().create();
+
+        try (FileWriter writer = new FileWriter(NOME_ARQUIVO)) {
+            gson.toJson(this.livros, writer);
         } catch (IOException e){
-            System.err.println("Erro ao salvar o arquivo: " + e.getMessage());
+            System.err.println("Erro ao salvar biblioteca em JSON: " + e.getMessage());
         }
     }
 
     private void carregarBiblioteca(){
         File arquivo = new File(NOME_ARQUIVO);
         if (!arquivo.exists()){
-            System.out.println("Nenhum arquivo encontrado! Iniciando novo arquivo...");
             return;
         }
-        try (BufferedReader reader = new BufferedReader(new FileReader(NOME_ARQUIVO))) {
-            String linha;
-            while ((linha = reader.readLine()) != null) {
-                String[] linhaSplit = linha.split(";");
-                if (linhaSplit.length == 3) {
-                    String titulo  = linhaSplit[0];
-                    String autor = linhaSplit[1];
-                    int anoDePublicacao = parseInt(linhaSplit[2]);
-                    biblioteca.add(new Livro(titulo, autor, anoDePublicacao));
-                }
+
+        Gson gson  = new Gson();
+
+        try (FileReader reader = new FileReader(NOME_ARQUIVO)) {
+            Type tipoLista = new TypeToken<ArrayList<Livro>>(){}.getType();
+            this.livros = gson.fromJson(reader, tipoLista);
+            if (this.livros == null || this.livros.isEmpty()){
+                this.livros = new ArrayList<>();
             }
-        } catch (IOException | NumberFormatException e){
-            System.err.println("Erro ao carregar biblioteca: " + e.getMessage());
+        } catch (IOException e){
+            System.err.println("Erro ao carregar biblioteca em JSON: " + e.getMessage());
+            this.livros = new ArrayList<>();
         }
     }
 }
